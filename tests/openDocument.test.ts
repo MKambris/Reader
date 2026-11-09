@@ -6,8 +6,9 @@ import { DrmError, NoTextError, UnsupportedTypeError } from '../src/doc/errors'
 
 const FIX = join(__dirname, 'fixtures')
 const load = (name: string) => new File([readFileSync(join(FIX, name))], name)
-const allText = (d: Awaited<ReturnType<typeof openDocument>>) =>
-  d.sections.flatMap(s => s.blocks.map(b => b.text)).join('\n')
+type D = Awaited<ReturnType<typeof openDocument>>
+const textBlocks = (d: D) => d.sections.flatMap(s => s.blocks).flatMap(b => (b.kind === 'text' ? [b] : []))
+const allText = (d: D) => textBlocks(d).map(b => b.text).join('\n')
 
 const BOOKS = ['book.epub', 'book.mobi', 'book.azw3', 'book.fb2', 'book.pdf', 'book.docx', 'book.txt']
 const ARTICLES = ['article.html', 'article.mhtml']
@@ -16,7 +17,7 @@ describe('openDocument — AC1 every format yields a Doc', () => {
   it.each([...BOOKS, ...ARTICLES])('%s', async name => {
     const doc = await openDocument(load(name))
     expect(doc.title.trim()).not.toBe('')
-    const blocks = doc.sections.flatMap(s => s.blocks)
+    const blocks = textBlocks(doc)
     expect(blocks.length).toBeGreaterThan(0)
     for (const b of blocks) {
       expect(b.text).not.toMatch(/<[a-z/!][^>]*>/i)

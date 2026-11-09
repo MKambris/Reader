@@ -41,9 +41,9 @@ export class Library {
   }
 
   /** Parse first; only a file that opens successfully is stored. */
-  async importFile(file: File): Promise<BookMeta> {
+  async importFile(file: File, onProgress?: (fraction: number) => void): Promise<BookMeta> {
     if (!isSupported(file.name)) throw new UnsupportedTypeError(extensionOf(file.name))
-    const doc = await openDocument(file)
+    const doc = await openDocument(file, { onProgress })
     const meta: BookMeta = {
       id: crypto.randomUUID(),
       title: doc.title,
@@ -75,6 +75,12 @@ export class Library {
     const doc = await openDocument(new File([file.blob], meta.fileName))
     await this.putCachedDoc(id, doc, PARSER_VERSION)
     return doc
+  }
+
+  /** The original imported file (e.g. for PDF page view). */
+  async getFile(id: string): Promise<File | undefined> {
+    const [meta, rec] = await Promise.all([this.db.get('books', id), this.db.get('files', id)])
+    return meta && rec ? new File([rec.blob], meta.fileName) : undefined
   }
 
   async putCachedDoc(id: string, doc: Doc, parserVersion: number) {

@@ -34,3 +34,8 @@ button.primary { background: var(--accent); color: #000; border: 0; font-weight:
 .page { max-width: 38rem; margin: 0 auto; padding: 1rem 1.25rem calc(100vh - 5rem); font-size: 1.25rem; line-height: 1.6; }
 .section { font-size: 1rem; color: var(--muted); margin: 2.5rem 0 1rem; text-transform: uppercase; letter-spacing: .05em; }
 .block { margin: 0 0 1em; }
+.block.image { margin: 0 0 1em; text-align: center; }
+.block.image img { max-width: 100%; height: auto; }
+.pdf-pages { max-width: 60rem; margin: 0 auto; padding: .5rem .5rem calc(100vh - 5rem); }
+.pdf-page { width: 100%; background: #111; margin: 0 0 .5rem; }
+.pdf-page canvas { width: 100%; height: auto; display: block; background: #fff; }

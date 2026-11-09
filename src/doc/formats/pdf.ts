@@ -1,10 +1,12 @@
 import { NoTextError } from '../errors'
-import type { Parsed } from '../types'
+import { textItems } from '../blocks'
+import { makeYielder } from '../images'
+import type { OpenOptions, Parsed, ParsedSection } from '../types'
 
 type TextItem = { str: string; transform: number[]; height: number; hasEOL?: boolean }
 
 let workerReady: Promise<void> | null = null
-async function pdfjs() {
+export async function pdfjs() {
   const lib = await import('pdfjs-dist/legacy/build/pdf.mjs')
   workerReady ??= (async () => {
     if (lib.GlobalWorkerOptions.workerSrc) return
@@ -61,21 +63,24 @@ function pageParagraphs(items: TextItem[]): string[] {
   return paras
 }
 
-export async function parsePdf(file: Blob): Promise<Parsed> {
+export async function parsePdf(file: Blob, opts: OpenOptions = {}): Promise<Parsed> {
   const lib = await pdfjs()
   const data = new Uint8Array(await file.arrayBuffer())
   const task = lib.getDocument({ data, useSystemFonts: true })
   const pdf = await task.promise
   try {
     const meta = (await pdf.getMetadata().catch(() => null))?.info as Record<string, unknown> | undefined
-    const sections = []
+    const sections: ParsedSection[] = []
+    const yieldNow = makeYielder()
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i)
       const content = await page.getTextContent()
       const texts = pageParagraphs((content.items as unknown[]).filter((x): x is TextItem => typeof x === "object" && x !== null && "str" in x))
-      sections.push({ title: `Page ${i}`, texts })
+      sections.push({ title: `Page ${i}`, items: textItems(texts) })
+      opts.onProgress?.(i / pdf.numPages)
+      await yieldNow()
     }
-    if (!sections.some(s => s.texts.length)) throw new NoTextError()
+    if (!sections.some(s => s.items.length)) throw new NoTextError()
     const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
     return { title: str(meta?.Title), author: str(meta?.Author), sections }
   } finally {

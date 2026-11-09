@@ -40,22 +40,53 @@ NAV_TEXT = ["Home", "World", "Technology", "Subscribe now"]
 FOOTER_TEXT = ["Privacy policy", "Terms of service", "Contact us"]
 
 
+ILLUSTRATION_ALT = "A small illustration"
+CHART_ALT = "A chart of recall scores"
+IMG_URL = "https://news.example.com/chart.png"
+# 1x1 transparent GIF: a classic spacer image that must be skipped.
+SPACER_GIF = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
+
+def png_bytes(w=160, h=100, seed=1) -> bytes:
+    """A PNG comfortably over 512 bytes (noisy gradient), so it isn't mistaken for a spacer."""
+    import io
+    import random
+    from PIL import Image
+    rnd = random.Random(seed)
+    img = Image.new("RGB", (w, h))
+    img.putdata([(x * 255 // w, y * 255 // h, rnd.randrange(256)) for y in range(h) for x in range(w)])
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return buf.getvalue()
+
+
 def run(*cmd):
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def book_markdown():
+def book_markdown(image_path=None):
     lines = [f"---\ntitle: {TITLE}\nauthor: {AUTHOR}\n---\n"]
-    for heading, paras in CHAPTERS:
+    for ci, (heading, paras) in enumerate(CHAPTERS):
         lines.append(f"# {heading}\n")
-        lines.extend(p + "\n" for p in paras)
+        for pi, p in enumerate(paras):
+            lines.append(p + "\n")
+            # One illustration between the two paragraphs of Chapter One.
+            if image_path and ci == 0 and pi == 0:
+                lines.append(f"![{ILLUSTRATION_ALT}]({image_path}){{.illustration}}\n")
     return "\n".join(lines)
 
 
-def article_html():
+def article_html(img_src=None):
     nav = "".join(f'<li><a href="/{t.lower()}">{t}</a></li>' for t in NAV_TEXT)
     foot = "".join(f'<a href="/{i}">{t}</a> ' for i, t in enumerate(FOOTER_TEXT))
-    body = "".join(f"<p>{p}</p>" for p in ARTICLE_BODY)
+    import base64
+    if img_src is None:
+        img_src = "data:image/png;base64," + base64.b64encode(png_bytes(seed=2)).decode()
+    paras = [f"<p>{p}</p>" for p in ARTICLE_BODY]
+    # Photo after the second paragraph; a 1x1 spacer after the third.
+    paras.insert(2, f'<figure><img src="{img_src}" alt="{CHART_ALT}" width="160" height="100"></figure>')
+    paras.insert(4, f'<p><img src="data:image/gif;base64,{SPACER_GIF}" width="1" height="1" alt="">')
+    body = "".join(paras)
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Reading Aloud Helps, Study Finds</title></head>
 <body>
@@ -71,7 +102,7 @@ def article_html():
 """
 
 
-def mhtml_from_html(html: str) -> bytes:
+def mhtml_from_html(html: str, images: dict | None = None) -> bytes:
     # Mirrors Chrome "Saved by Blink" layout: multipart/related, quoted-printable HTML part.
     msg = MIMEMultipart("related", type="text/html")
     msg["From"] = "<Saved by Blink>"
@@ -85,6 +116,11 @@ def mhtml_from_html(html: str) -> bytes:
     css = MIMEText("body{font-family:serif}", "css")
     css["Content-Location"] = "https://news.example.com/style.css"
     msg.attach(css)
+    from email.mime.image import MIMEImage
+    for url, data in (images or {}).items():
+        img = MIMEImage(data, "png")
+        img["Content-Location"] = url
+        msg.attach(img)
     return msg.as_bytes()
 
 
@@ -111,6 +147,21 @@ def make_pdf(path: Path):
                 line += w + " "
             c.drawString(72, y, line.strip())
             y -= 36  # paragraph gap
+        c.showPage()
+    c.save()
+
+
+def make_long_pdf(path: Path, pages: int):
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    c = canvas.Canvas(str(path), pagesize=letter)
+    c.setTitle("Long Fixture")
+    for i in range(1, pages + 1):
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(72, 720, f"Page heading {i}")
+        c.setFont("Helvetica", 12)
+        c.drawString(72, 680, f"This is the body text of page {i}.")
         c.showPage()
     c.save()
 
@@ -150,11 +201,17 @@ def main():
     OUT.mkdir(parents=True)
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
+        (td / "illustration.png").write_bytes(png_bytes(seed=1))
         md = td / "book.md"
-        md.write_text(book_markdown())
-        run("pandoc", str(md), "-o", str(OUT / "book.epub"))
-        run("pandoc", str(md), "-o", str(OUT / "book.docx"))
-        run("pandoc", str(md), "-o", str(OUT / "book.fb2"))
+        md.write_text(book_markdown("illustration.png"))
+        cwd = os.getcwd()
+        os.chdir(td)  # pandoc resolves the image path relative to cwd
+        try:
+            run("pandoc", str(md), "-o", str(OUT / "book.epub"))
+            run("pandoc", str(md), "-o", str(OUT / "book.docx"))
+            run("pandoc", str(md), "-o", str(OUT / "book.fb2"))
+        finally:
+            os.chdir(cwd)
         run("ebook-convert", str(OUT / "book.epub"), str(OUT / "book.mobi"), "--mobi-file-type", "old")
         run("ebook-convert", str(OUT / "book.epub"), str(OUT / "book.azw3"))
 
@@ -166,7 +223,10 @@ def main():
 
     html = article_html()
     (OUT / "article.html").write_text(html)
-    (OUT / "article.mhtml").write_bytes(mhtml_from_html(html))
+    # MHTML: the photo is a separate MIME part referenced by URL, like Chrome saves it.
+    (OUT / "article.mhtml").write_bytes(
+        mhtml_from_html(article_html(img_src=IMG_URL), {IMG_URL: png_bytes(seed=2)}))
+    make_long_pdf(OUT / "long.pdf", pages=20)
 
     # DRM EPUB: encryption.xml with a real (non-font-obfuscation) cipher.
     enc = b"""<?xml version="1.0"?>
@@ -203,14 +263,33 @@ def main():
                  '<ruby>漢<rp>(</rp><rt>かん</rt><rp>)</rp></ruby>字。</p></body></html>').encode()
     def ruby_and_jpeg(n, d):
         if n is None:
-            return {"EPUB/text/ruby.xhtml": ruby_page, "EPUB/media/page.jpg": jpg.getvalue()}
+            svg_page = ('<?xml version="1.0" encoding="UTF-8"?>\n<!-- ' + 'x' * 1200 + ' -->\n'
+                        '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="#8ac"/></svg>').encode()
+            return {"EPUB/text/ruby.xhtml": ruby_page, "EPUB/media/page.jpg": jpg.getvalue(), "EPUB/media/page.svg": svg_page}
         if n.endswith("content.opf"):
             d = d.replace(b"</manifest>",
                           b'<item id="rubypage" href="text/ruby.xhtml" media-type="application/xhtml+xml"/>'
-                          b'<item id="jpgpage" href="media/page.jpg" media-type="image/jpeg"/></manifest>')
-            d = d.replace(b"</spine>", b'<itemref idref="jpgpage"/><itemref idref="rubypage"/></spine>')
+                          b'<item id="jpgpage" href="media/page.jpg" media-type="image/jpeg"/>'
+                          b'<item id="svgpage" href="media/page.svg" media-type="image/svg+xml"/></manifest>')
+            d = d.replace(b"</spine>", b'<itemref idref="jpgpage"/><itemref idref="rubypage"/><itemref idref="svgpage"/></spine>')
         return d
     rewrite_zip(OUT / "book.epub", OUT / "ruby-jpeg-spine.epub", ruby_and_jpeg)
+
+    # SVG-script EPUB: an <img>-referenced SVG and an inline SVG, both carrying scripts.
+    svg = (b'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100">'
+           b'<script>window.__pwned = 1;</script>'
+           b'<rect width="200" height="100" fill="#3a7"/><circle cx="100" cy="50" r="40" fill="#fc3"/>'
+           b'<text x="20" y="90" font-size="14">An SVG picture with a script inside it</text></svg>')
+    def svg_inject(n, d):
+        if n is None:
+            return {"EPUB/media/evil.svg": svg}
+        if n.endswith("content.opf"):
+            d = d.replace(b"</manifest>",
+                          b'<item id="evilsvg" href="media/evil.svg" media-type="image/svg+xml"/></manifest>')
+        if n.endswith("ch001.xhtml"):
+            d = d.replace(b"</body>", b'<p><img src="../media/evil.svg" alt="Evil SVG"/></p>' + svg + b"</body>")
+        return d
+    rewrite_zip(OUT / "book.epub", OUT / "svg-script.epub", svg_inject)
 
     for p in sorted(OUT.iterdir()):
         print(f"{p.name:16} {p.stat().st_size:>8}")

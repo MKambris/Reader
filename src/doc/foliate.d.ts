@@ -28,5 +28,10 @@ declare module '*/foliate-js/vendor/fflate.js' {
 
 interface FoliateBook {
   metadata?: { title?: unknown; author?: unknown }
-  sections: { createDocument?: () => Document | Promise<Document>; linear?: string }[]
+  sections: {
+    id?: string | number
+    createDocument?: () => Document | Promise<Document>
+    resolveHref?: (href: string) => string
+    linear?: string
+  }[]
 }

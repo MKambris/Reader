@@ -1,7 +1,16 @@
 import { domToSection } from '../blocks'
+import { makeYielder, noExternalImages, resolveSection } from '../images'
 import { isEpubDrm, isMobiDrm } from '../drm'
 import { DrmError, UnsupportedTypeError } from '../errors'
-import type { Parsed, RawSection } from '../types'
+import type { ImageResolver, OpenOptions, Parsed, ParsedSection } from '../types'
+
+type FSection = FoliateBook['sections'][number]
+interface ImageAccess {
+  /** Resolve an image src found inside `section`. */
+  resolverFor: (section: FSection) => ImageResolver
+  /** Raw bytes of a spine item that isn't markup (e.g. a JPEG page), if available. */
+  sectionBlob?: (section: FSection) => Promise<Blob | null>
+}
 
 const pickLang = (v: unknown): string | undefined => {
   if (typeof v === 'string') return v
@@ -20,27 +29,34 @@ const authorOf = (v: unknown): string | undefined => {
   return names.length ? names.join(', ') : undefined
 }
 
-async function fromBook(book: FoliateBook): Promise<Parsed> {
-  const sections: RawSection[] = []
-  for (const s of book.sections) {
+async function fromBook(book: FoliateBook, access: ImageAccess, opts: OpenOptions): Promise<Parsed> {
+  const sections: ParsedSection[] = []
+  const yieldNow = makeYielder()
+  const n = book.sections.length
+  for (const [i, s] of book.sections.entries()) {
     // Keep one entry per spine item so section indices (and block ids) stay stable.
-    if (!s.createDocument) {
-      sections.push({ texts: [] })
-      continue
-    }
-    try {
-      const doc = await s.createDocument()
-      sections.push(domToSection(doc.body ?? doc.documentElement))
-    } catch (e) {
-      // Non-document spine items (e.g. a JPEG page in a manga EPUB) can't be parsed as markup.
-      console.warn('Skipping unreadable section', e)
-      sections.push({ texts: [] })
-    }
+    sections.push(await readSection(s, access))
+    opts.onProgress?.((i + 1) / n)
+    await yieldNow()
   }
+  if (!n) opts.onProgress?.(1)
   return {
     title: pickLang(book.metadata?.title)?.trim() || undefined,
     author: authorOf(book.metadata?.author),
     sections,
+  }
+}
+
+async function readSection(s: FSection, access: ImageAccess): Promise<ParsedSection> {
+  if (!s.createDocument) return { items: [] }
+  try {
+    const doc = await s.createDocument()
+    return await resolveSection(domToSection(doc.body ?? doc.documentElement), access.resolverFor(s))
+  } catch {
+    // Non-markup spine item (e.g. a JPEG page in a manga EPUB): show it as a picture.
+    const blob = await access.sectionBlob?.(s).catch(() => null)
+    if (!blob) return { items: [] }
+    return resolveSection({ items: [{ kind: 'blob', blob, alt: '' }] }, noExternalImages)
   }
 }
 
@@ -61,24 +77,44 @@ async function zipLoader(file: Blob) {
   }
 }
 
-export async function parseEpub(file: Blob): Promise<Parsed> {
+export async function parseEpub(file: Blob, opts: OpenOptions = {}): Promise<Parsed> {
   const loader = await zipLoader(file)
   const enc = await loader.loadText('META-INF/encryption.xml')
   if (isEpubDrm(enc, loader.has('META-INF/rights.xml'))) throw new DrmError()
   const { EPUB } = await import('../../../vendor/foliate-js/epub.js')
-  return fromBook(await new EPUB(loader).init())
+  const loadPath = async (path: string): Promise<Blob | null> => {
+    for (const p of [path, safeDecode(path)]) {
+      const b = await loader.loadBlob(p)
+      if (b) return b as Blob
+    }
+    return null
+  }
+  return fromBook(await new EPUB(loader).init(), {
+    resolverFor: s => src => loadPath(s.resolveHref ? s.resolveHref(src.split('#')[0]) : src),
+    sectionBlob: s => (typeof s.id === 'string' ? loadPath(s.id) : Promise.resolve(null)),
+  }, opts)
 }
 
-export async function parseMobi(file: Blob): Promise<Parsed> {
+const safeDecode = (s: string) => {
+  try { return decodeURIComponent(s) } catch { return s }
+}
+
+export async function parseMobi(file: Blob, opts: OpenOptions = {}): Promise<Parsed> {
   const { MOBI, isMOBI } = await import('../../../vendor/foliate-js/mobi.js')
   // Old PalmDOC-only files (TEXtREAd) aren't readable by foliate-js.
   if (!(await isMOBI(file))) throw new UnsupportedTypeError('mobi (old PalmDOC format)')
   if (await isMobiDrm(file)) throw new DrmError()
   const { unzlibSync } = await import('../../../vendor/foliate-js/vendor/fflate.js')
-  return fromBook(await new MOBI({ unzlib: unzlibSync }).open(file))
+  const book: any = await new MOBI({ unzlib: unzlibSync }).open(file)
+  const resolve: ImageResolver = async src => {
+    if (src.startsWith('recindex:')) return new Blob([await book.mobi.loadResource(Number(src.slice(9)) - 1)])
+    if (src.startsWith('kindle:')) return (await book.loadResourceBlob(src))[0]
+    return null
+  }
+  return fromBook(book, { resolverFor: () => resolve }, opts)
 }
 
-export async function parseFb2(file: Blob, zipped: boolean): Promise<Parsed> {
+export async function parseFb2(file: Blob, zipped: boolean, opts: OpenOptions = {}): Promise<Parsed> {
   const { makeFB2 } = await import('../../../vendor/foliate-js/fb2.js')
   let blob = file
   if (zipped) {
@@ -86,5 +122,6 @@ export async function parseFb2(file: Blob, zipped: boolean): Promise<Parsed> {
     const entry = loader.entries.find((e: any) => e.filename.endsWith('.fb2')) ?? loader.entries[0]
     blob = (await loader.loadBlob(entry.filename)) as Blob
   }
-  return fromBook(await makeFB2(blob))
+  // FB2 images are embedded <binary> elements that foliate turns into data: URLs.
+  return fromBook(await makeFB2(blob), { resolverFor: () => noExternalImages }, opts)
 }

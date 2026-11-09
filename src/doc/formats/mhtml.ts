@@ -25,13 +25,21 @@ function headers(block: string): Map<string, string> {
   return map
 }
 
-/** Extract the first text/html part of an MHTML (MIME multipart/related) archive. */
-export function mhtmlToHtml(raw: Uint8Array): string {
+export interface MhtmlParts {
+  html: string
+  /** Every non-HTML part, keyed by its Content-Location URL. */
+  resources: Map<string, Blob>
+}
+
+/** Split an MHTML (MIME multipart/related) archive into its first HTML part and its resources. */
+export function readMhtml(raw: Uint8Array): MhtmlParts {
   const text = latin1(raw)
   const split = text.search(/\r?\n\r?\n/)
   const top = headers(text.slice(0, split))
   const boundary = /boundary="?([^";]+)"?/i.exec(top.get('content-type') ?? '')?.[1]
   if (!boundary) throw new Error('MHTML: missing multipart boundary')
+  let html: string | undefined
+  const resources = new Map<string, Blob>()
   for (const part of text.split('--' + boundary).slice(1)) {
     if (part.startsWith('--')) break
     const p = part.replace(/^\r?\n/, '')
@@ -39,20 +47,26 @@ export function mhtmlToHtml(raw: Uint8Array): string {
     if (sep < 0) continue
     const h = headers(p.slice(0, sep))
     const type = h.get('content-type') ?? ''
-    if (!/^text\/html/i.test(type)) continue
     const body = p.slice(sep).replace(/^\r?\n\r?\n/, '').replace(/\r?\n$/, '')
     const enc = (h.get('content-transfer-encoding') ?? '').toLowerCase()
     const bytes = enc === 'quoted-printable' ? decodeQP(body)
       : enc === 'base64' ? bytesOf(atob(body.replace(/\s+/g, '')))
       : bytesOf(body)
-    const charset = /charset="?([^";]+)"?/i.exec(type)?.[1] ?? 'utf-8'
-    let decoder: TextDecoder
-    try { decoder = new TextDecoder(charset) } catch { decoder = new TextDecoder('utf-8') }
-    return decoder.decode(bytes)
+    if (/^text\/html/i.test(type) && html === undefined) {
+      const charset = /charset="?([^";]+)"?/i.exec(type)?.[1] ?? 'utf-8'
+      let decoder: TextDecoder
+      try { decoder = new TextDecoder(charset) } catch { decoder = new TextDecoder('utf-8') }
+      html = decoder.decode(bytes)
+    } else {
+      const loc = h.get('content-location')
+      if (loc) resources.set(loc, new Blob([bytes as Uint8Array<ArrayBuffer>], { type: type.split(';')[0].trim() }))
+    }
   }
-  throw new Error('MHTML: no text/html part')
+  if (html === undefined) throw new Error('MHTML: no text/html part')
+  return { html, resources }
 }
 
 export async function parseMhtml(file: Blob): Promise<Parsed> {
-  return parseHtmlString(mhtmlToHtml(new Uint8Array(await file.arrayBuffer())))
+  const { html, resources } = readMhtml(new Uint8Array(await file.arrayBuffer()))
+  return parseHtmlString(html, async src => resources.get(src) ?? null)
 }

@@ -12,9 +12,10 @@ Pictures appear in their place between paragraphs for EPUB, MOBI, AZW3, FB2, DOC
 - The `Block` type becomes `{ id, kind: 'text', text } | { id, kind: 'image', blob, alt }`. Image blocks get their own ids (`s{section}i{n}`), so **text block ids don't change** and saved positions stay valid.
 - Image bytes are stored as Blobs inside the cached `Doc` in IndexedDB, so they work offline and are deleted with the book. They are shown with `URL.createObjectURL`, and those URLs are revoked when the reader closes.
 - Image sources: EPUB and FB2 resources from the archive, MOBI/AZW3 image records, DOCX images embedded by mammoth, HTML `data:` images, and MHTML parts matched by `Content-Location`.
-- Spacer images are skipped: Blobs under 512 bytes, or images whose declared width or height is 16 px or less.
+- Spacer images are skipped: bitmap Blobs under 512 bytes (SVGs are exempt, because they're tiny by nature), or images whose declared width or height is 16 px or less.
 - Images are always shown with `<img>` (alt text, `max-width: 100%`). SVG is also shown through `<img>`, so any scripts inside it can't run.
-- PDF Page view uses PDF.js to draw each page onto a canvas at screen width. Only pages within one screen of the visible area are drawn; the rest are placeholders. Page N corresponds to section `s{N-1}`.
+- PDF Page view uses PDF.js to draw each page onto a canvas at screen width. Only pages within half a screen of the visible area are drawn (one screen allowed up to 6 canvases on a phone-sized view); the rest are placeholders. Page N corresponds to section `s{N-1}`.
+- `<object>` fallback content is now shown (the reader never runs embedded objects). This adds the missing text and pictures to books such as the IDPF figure-gallery and quiz samples.
 - `PARSER_VERSION` → 2, so existing library items re-parse on next open.
 
 ## Non-goals

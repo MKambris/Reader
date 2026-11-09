@@ -1,6 +1,7 @@
 import './style.css'
 import { Library, ensurePersisted, resolvePosition, type BookMeta } from './library/store'
 import type { Doc } from './doc/types'
+import { createPageView, type PageView } from './ui/pageView'
 
 const app = document.getElementById('app')!
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
@@ -65,11 +66,18 @@ function bookRow(b: BookMeta) {
 
 async function importFiles(files: File[]) {
   if (!files.length) return
-  showLibrary('Importing…')
   const errors: string[] = []
-  for (const f of files) {
+  for (const [i, f] of files.entries()) {
+    await showLibrary('Importing…')
+    const status = app.querySelector('.msg')
+    const label = files.length > 1 ? `Importing ${f.name} (${i + 1}/${files.length})` : `Importing ${f.name}`
+    let shown = -1
+    const onProgress = (fraction: number) => {
+      const pct = Math.floor(fraction * 100)
+      if (pct !== shown && status) status.textContent = `${label}… ${(shown = pct)}%`
+    }
     try {
-      await lib.importFile(f)
+      await lib.importFile(f, onProgress)
     } catch (e) {
       errors.push(`${f.name}: ${(e as Error).message}`)
     }
@@ -78,14 +86,27 @@ async function importFiles(files: File[]) {
   showLibrary(errors.join('\n') || undefined)
 }
 
+const isPdf = (meta: BookMeta) => /\.pdf$/i.test(meta.fileName)
+
 async function showReader(meta: BookMeta) {
   const token = ++renderToken
   app.replaceChildren()
   const header = el('header', 'bar')
   const back = el('button', '', '← Library')
+  const toggle = el('button', 'view-toggle', 'Page view')
   header.append(back, el('h1', 'reader-title', meta.title))
+  if (isPdf(meta)) header.append(toggle)
   const page = el('main', 'page')
-  app.append(header, page)
+  const pages = el('main', 'pdf-pages')
+  pages.hidden = true
+  app.append(header, page, pages)
+
+  const urls: string[] = []
+  let pageView: PageView | null = null
+  const cleanup = () => {
+    urls.forEach(u => URL.revokeObjectURL(u))
+    pageView?.destroy()
+  }
 
   let doc: Doc
   try {
@@ -101,20 +122,36 @@ async function showReader(meta: BookMeta) {
   for (const s of doc.sections) {
     page.append(el('h2', 'section', s.title))
     for (const b of s.blocks) {
-      const p = el('p', 'block', b.text)
-      p.dataset.id = b.id
-      page.append(p)
-      blocks.push(p)
+      let node: HTMLElement
+      if (b.kind === 'image') {
+        node = el('figure', 'block image')
+        const img = el('img')
+        const url = URL.createObjectURL(b.blob)
+        urls.push(url)
+        img.src = url
+        img.alt = b.alt
+        img.loading = 'lazy'
+        img.decoding = 'async'
+        node.append(img)
+      } else {
+        node = el('p', 'block', b.text)
+      }
+      node.dataset.id = b.id
+      page.append(node)
+      blocks.push(node)
     }
   }
 
-  const saved = await lib.getPosition(meta.id)
-  if (token !== renderToken) return
-  const target = resolvePosition(doc, saved)
   const headerBottom = () => header.getBoundingClientRect().bottom
-  const targetEl = blocks.find(b => b.dataset.id === target)
-  window.scrollTo(0, 0)
-  if (targetEl) window.scrollTo(0, targetEl.getBoundingClientRect().top - headerBottom())
+  const scrollToBlock = (id: string | undefined) => {
+    const target = blocks.find(b => b.dataset.id === id)
+    window.scrollTo(0, 0)
+    if (target) window.scrollTo(0, target.getBoundingClientRect().top - headerBottom())
+  }
+
+  const saved = await lib.getPosition(meta.id)
+  if (token !== renderToken) return cleanup()
+  scrollToBlock(resolvePosition(doc, saved))
 
   /** First block whose bottom is below the header (binary search; blocks are in document order). */
   const topBlockIndex = () => {
@@ -127,14 +164,57 @@ async function showReader(meta: BookMeta) {
     }
     return lo
   }
+  /** Section index n ↔ PDF page n+1 (ids are s{n}b…/s{n}i…). */
+  const sectionOf = (id: string) => Number(/^s(\d+)/.exec(id)?.[1] ?? 0)
+  const firstBlockOfPage = (pageNo: number) => {
+    const i = blocks.findIndex(b => sectionOf(b.dataset.id!) >= pageNo - 1)
+    return i >= 0 ? i : blocks.length - 1
+  }
+  const currentIndex = () => (pageView ? firstBlockOfPage(pageView.topPage()) : topBlockIndex())
+
   const save = () => {
     if (!blocks.length) return
-    const i = topBlockIndex()
+    const i = currentIndex()
     lib.savePosition(meta.id, {
       blockId: blocks[i].dataset.id!,
       fraction: blocks.length > 1 ? i / (blocks.length - 1) : 0,
     })
   }
+
+  let switching = false
+  toggle.onclick = async () => {
+    if (switching) return
+    switching = true
+    try {
+      await switchView()
+    } finally {
+      switching = false
+    }
+  }
+  const switchView = async () => {
+    if (!pageView) {
+      const pageNo = blocks.length ? sectionOf(blocks[topBlockIndex()].dataset.id!) + 1 : 1
+      const file = await lib.getFile(meta.id)
+      if (!file) return
+      page.hidden = true
+      pages.hidden = false
+      pageView = await createPageView(file, pages, headerBottom)
+      pageView.scrollToPage(pageNo)
+      toggle.textContent = 'Text view'
+    } else {
+      const i = firstBlockOfPage(pageView.topPage())
+      const pv = pageView
+      pageView = null
+      await pv.destroy()
+      pages.replaceChildren()
+      pages.hidden = true
+      page.hidden = false
+      scrollToBlock(blocks[i]?.dataset.id)
+      toggle.textContent = 'Page view'
+    }
+    save()
+  }
+
   let timer: number | undefined
   const onScroll = () => {
     clearTimeout(timer)
@@ -149,6 +229,7 @@ async function showReader(meta: BookMeta) {
     window.removeEventListener('scroll', onScroll)
     document.removeEventListener('visibilitychange', onHide)
     window.removeEventListener('pagehide', save)
+    cleanup()
     window.scrollTo(0, 0)
     showLibrary()
   }

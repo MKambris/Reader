@@ -1,0 +1,596 @@
+{
+ "article.html": [
+  [
+   "s0b0",
+   "By Jane Reporter"
+  ],
+  [
+   "s0b1",
+   "Researchers announced today that reading aloud improves comprehension for many listeners."
+  ],
+  [
+   "s0b2",
+   "The study followed two hundred participants over six months and measured recall after each session."
+  ],
+  [
+   "s0b3",
+   "Participants who listened while following the text remembered noticeably more than those who only read silently."
+  ],
+  [
+   "s0b4",
+   "The authors caution that the effect varied widely between individuals and between kinds of material."
+  ]
+ ],
+ "article.mhtml": [
+  [
+   "s0b0",
+   "By Jane Reporter"
+  ],
+  [
+   "s0b1",
+   "Researchers announced today that reading aloud improves comprehension for many listeners."
+  ],
+  [
+   "s0b2",
+   "The study followed two hundred participants over six months and measured recall after each session."
+  ],
+  [
+   "s0b3",
+   "Participants who listened while following the text remembered noticeably more than those who only read silently."
+  ],
+  [
+   "s0b4",
+   "The authors caution that the effect varied widely between individuals and between kinds of material."
+  ]
+ ],
+ "book.azw3": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s0b1",
+   "Test Author"
+  ],
+  [
+   "s1b0",
+   "Chapter One"
+  ],
+  [
+   "s1b1",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s1b2",
+   "A small illustration"
+  ],
+  [
+   "s1b3",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s2b0",
+   "Chapter Two"
+  ],
+  [
+   "s2b1",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s2b2",
+   "A final paragraph closes the book."
+  ],
+  [
+   "s3b0",
+   "Fixture Book"
+  ],
+  [
+   "s3b1",
+   "Chapter One"
+  ],
+  [
+   "s3b2",
+   "Chapter Two"
+  ],
+  [
+   "s3b3",
+   "Title Page"
+  ]
+ ],
+ "book.docx": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s0b1",
+   "Test Author"
+  ],
+  [
+   "s0b2",
+   "Chapter One"
+  ],
+  [
+   "s0b3",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s0b4",
+   "A small illustration"
+  ],
+  [
+   "s0b5",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s0b6",
+   "Chapter Two"
+  ],
+  [
+   "s0b7",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s0b8",
+   "A final paragraph closes the book."
+  ]
+ ],
+ "book.epub": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s0b1",
+   "Test Author"
+  ],
+  [
+   "s1b0",
+   "Chapter One"
+  ],
+  [
+   "s1b1",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s1b2",
+   "A small illustration"
+  ],
+  [
+   "s1b3",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s2b0",
+   "Chapter Two"
+  ],
+  [
+   "s2b1",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s2b2",
+   "A final paragraph closes the book."
+  ]
+ ],
+ "book.fb2": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s1b0",
+   "Chapter One"
+  ],
+  [
+   "s1b1",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s1b2",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s2b0",
+   "Chapter Two"
+  ],
+  [
+   "s2b1",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s2b2",
+   "A final paragraph closes the book."
+  ]
+ ],
+ "book.mobi": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s0b1",
+   "Test Author"
+  ],
+  [
+   "s1b0",
+   "Chapter One"
+  ],
+  [
+   "s1b1",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s1b2",
+   "A small illustration"
+  ],
+  [
+   "s1b3",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s2b0",
+   "Chapter Two"
+  ],
+  [
+   "s2b1",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s2b2",
+   "A final paragraph closes the book."
+  ],
+  [
+   "s3b0",
+   "Fixture Book"
+  ],
+  [
+   "s3b1",
+   "Chapter One"
+  ],
+  [
+   "s3b2",
+   "Chapter Two"
+  ],
+  [
+   "s3b3",
+   "Title Page"
+  ]
+ ],
+ "book.pdf": [
+  [
+   "s0b0",
+   "Chapter One"
+  ],
+  [
+   "s0b1",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s0b2",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s1b0",
+   "Chapter Two"
+  ],
+  [
+   "s1b1",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s1b2",
+   "A final paragraph closes the book."
+  ]
+ ],
+ "book.txt": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s0b1",
+   "Chapter One"
+  ],
+  [
+   "s0b2",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s0b3",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s0b4",
+   "Chapter Two"
+  ],
+  [
+   "s0b5",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s0b6",
+   "A final paragraph closes the book."
+  ]
+ ],
+ "long.pdf": [
+  [
+   "s0b0",
+   "Page heading 1"
+  ],
+  [
+   "s0b1",
+   "This is the body text of page 1."
+  ],
+  [
+   "s1b0",
+   "Page heading 2"
+  ],
+  [
+   "s1b1",
+   "This is the body text of page 2."
+  ],
+  [
+   "s2b0",
+   "Page heading 3"
+  ],
+  [
+   "s2b1",
+   "This is the body text of page 3."
+  ],
+  [
+   "s3b0",
+   "Page heading 4"
+  ],
+  [
+   "s3b1",
+   "This is the body text of page 4."
+  ],
+  [
+   "s4b0",
+   "Page heading 5"
+  ],
+  [
+   "s4b1",
+   "This is the body text of page 5."
+  ],
+  [
+   "s5b0",
+   "Page heading 6"
+  ],
+  [
+   "s5b1",
+   "This is the body text of page 6."
+  ],
+  [
+   "s6b0",
+   "Page heading 7"
+  ],
+  [
+   "s6b1",
+   "This is the body text of page 7."
+  ],
+  [
+   "s7b0",
+   "Page heading 8"
+  ],
+  [
+   "s7b1",
+   "This is the body text of page 8."
+  ],
+  [
+   "s8b0",
+   "Page heading 9"
+  ],
+  [
+   "s8b1",
+   "This is the body text of page 9."
+  ],
+  [
+   "s9b0",
+   "Page heading 10"
+  ],
+  [
+   "s9b1",
+   "This is the body text of page 10."
+  ],
+  [
+   "s10b0",
+   "Page heading 11"
+  ],
+  [
+   "s10b1",
+   "This is the body text of page 11."
+  ],
+  [
+   "s11b0",
+   "Page heading 12"
+  ],
+  [
+   "s11b1",
+   "This is the body text of page 12."
+  ],
+  [
+   "s12b0",
+   "Page heading 13"
+  ],
+  [
+   "s12b1",
+   "This is the body text of page 13."
+  ],
+  [
+   "s13b0",
+   "Page heading 14"
+  ],
+  [
+   "s13b1",
+   "This is the body text of page 14."
+  ],
+  [
+   "s14b0",
+   "Page heading 15"
+  ],
+  [
+   "s14b1",
+   "This is the body text of page 15."
+  ],
+  [
+   "s15b0",
+   "Page heading 16"
+  ],
+  [
+   "s15b1",
+   "This is the body text of page 16."
+  ],
+  [
+   "s16b0",
+   "Page heading 17"
+  ],
+  [
+   "s16b1",
+   "This is the body text of page 17."
+  ],
+  [
+   "s17b0",
+   "Page heading 18"
+  ],
+  [
+   "s17b1",
+   "This is the body text of page 18."
+  ],
+  [
+   "s18b0",
+   "Page heading 19"
+  ],
+  [
+   "s18b1",
+   "This is the body text of page 19."
+  ],
+  [
+   "s19b0",
+   "Page heading 20"
+  ],
+  [
+   "s19b1",
+   "This is the body text of page 20."
+  ]
+ ],
+ "ruby-jpeg-spine.epub": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s0b1",
+   "Test Author"
+  ],
+  [
+   "s1b0",
+   "Chapter One"
+  ],
+  [
+   "s1b1",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s1b2",
+   "A small illustration"
+  ],
+  [
+   "s1b3",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s2b0",
+   "Chapter Two"
+  ],
+  [
+   "s2b1",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s2b2",
+   "A final paragraph closes the book."
+  ],
+  [
+   "s4b0",
+   "山路を登りながら、漢字。"
+  ]
+ ],
+ "script.epub": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s0b1",
+   "Test Author"
+  ],
+  [
+   "s1b0",
+   "Chapter One"
+  ],
+  [
+   "s1b1",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s1b2",
+   "A small illustration"
+  ],
+  [
+   "s1b3",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s2b0",
+   "Chapter Two"
+  ],
+  [
+   "s2b1",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s2b2",
+   "A final paragraph closes the book."
+  ]
+ ],
+ "svg-script.epub": [
+  [
+   "s0b0",
+   "Fixture Book"
+  ],
+  [
+   "s0b1",
+   "Test Author"
+  ],
+  [
+   "s1b0",
+   "Chapter One"
+  ],
+  [
+   "s1b1",
+   "It was a bright cold day in April, and the clocks were striking thirteen."
+  ],
+  [
+   "s1b2",
+   "A small illustration"
+  ],
+  [
+   "s1b3",
+   "The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall."
+  ],
+  [
+   "s2b0",
+   "Chapter Two"
+  ],
+  [
+   "s2b1",
+   "The second chapter begins here with a sentence that is long enough to wrap."
+  ],
+  [
+   "s2b2",
+   "A final paragraph closes the book."
+  ]
+ ]
+}
