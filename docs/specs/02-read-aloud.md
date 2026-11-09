@@ -35,3 +35,4 @@ A play button starts narration from the current position. Speech uses Kokoro if 
 8. Before the first model download, a dialog shows the engine name and download size. Declining uses the system voice.
 9. In airplane mode after models are cached, Kokoro or Piper narration works.
 10. On the user's phone with the glasses connected, 10 minutes of narration with the selected engine has no audible gaps longer than 1 s between sentences (checked by hand).
+11. Image blocks (spec 01b) are skipped: `Narrator.play` emits no events for them and moves straight from the text before an image to the text after it.
