@@ -23,9 +23,19 @@ const authorOf = (v: unknown): string | undefined => {
 async function fromBook(book: FoliateBook): Promise<Parsed> {
   const sections: RawSection[] = []
   for (const s of book.sections) {
-    if (!s.createDocument) continue
-    const doc = await s.createDocument()
-    sections.push(domToSection(doc.body ?? doc.documentElement))
+    // Keep one entry per spine item so section indices (and block ids) stay stable.
+    if (!s.createDocument) {
+      sections.push({ texts: [] })
+      continue
+    }
+    try {
+      const doc = await s.createDocument()
+      sections.push(domToSection(doc.body ?? doc.documentElement))
+    } catch (e) {
+      // Non-document spine items (e.g. a JPEG page in a manga EPUB) can't be parsed as markup.
+      console.warn('Skipping unreadable section', e)
+      sections.push({ texts: [] })
+    }
   }
   return {
     title: pickLang(book.metadata?.title)?.trim() || undefined,

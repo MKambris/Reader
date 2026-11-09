@@ -193,6 +193,25 @@ def main():
         return d
     rewrite_zip(OUT / "book.epub", OUT / "script.epub", inject)
 
+    # Ruby + JPEG-in-spine EPUB: furigana must not duplicate text; an image spine item must not crash.
+    from PIL import Image
+    import io
+    jpg = io.BytesIO()
+    Image.new("RGB", (64, 64), "gray").save(jpg, "JPEG")
+    ruby_page = ('<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml">'
+                 '<head><title>r</title></head><body><p><ruby>山路<rt>やまみち</rt></ruby>を登りながら、'
+                 '<ruby>漢<rp>(</rp><rt>かん</rt><rp>)</rp></ruby>字。</p></body></html>').encode()
+    def ruby_and_jpeg(n, d):
+        if n is None:
+            return {"EPUB/text/ruby.xhtml": ruby_page, "EPUB/media/page.jpg": jpg.getvalue()}
+        if n.endswith("content.opf"):
+            d = d.replace(b"</manifest>",
+                          b'<item id="rubypage" href="text/ruby.xhtml" media-type="application/xhtml+xml"/>'
+                          b'<item id="jpgpage" href="media/page.jpg" media-type="image/jpeg"/></manifest>')
+            d = d.replace(b"</spine>", b'<itemref idref="jpgpage"/><itemref idref="rubypage"/></spine>')
+        return d
+    rewrite_zip(OUT / "book.epub", OUT / "ruby-jpeg-spine.epub", ruby_and_jpeg)
+
     for p in sorted(OUT.iterdir()):
         print(f"{p.name:16} {p.stat().st_size:>8}")
 

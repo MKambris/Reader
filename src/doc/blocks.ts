@@ -1,6 +1,7 @@
 import type { RawSection } from './types'
 
-const SKIP = new Set(['script', 'style', 'noscript', 'template', 'head', 'svg', 'iframe', 'object', 'title'])
+// rt/rp: ruby annotations (furigana). Keeping them would duplicate text, e.g. "山路やまみち".
+const SKIP = new Set(['script', 'style', 'noscript', 'template', 'head', 'svg', 'iframe', 'object', 'title', 'rt', 'rp'])
 const BLOCK = new Set([
   'address', 'article', 'aside', 'blockquote', 'body', 'caption', 'dd', 'div', 'dl', 'dt',
   'figcaption', 'figure', 'footer', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'li',

@@ -1,11 +1,11 @@
 Content-Type: multipart/related; type="text/html";
- boundary="===============3348924911591116574=="
+ boundary="===============5403236779161813173=="
 MIME-Version: 1.0
 From: <Saved by Blink>
 Snapshot-Content-Location: https://news.example.com/reading-aloud
 Subject: Reading Aloud Helps, Study Finds
 
---===============3348924911591116574==
+--===============5403236779161813173==
 Content-Type: text/html; charset="utf-8"
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
@@ -33,11 +33,11 @@ etween individuals and between kinds of material.</p>
 a> <a href=3D"/2">Contact us</a> </footer>
 </body></html>
 
---===============3348924911591116574==
+--===============5403236779161813173==
 Content-Type: text/css; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Content-Location: https://news.example.com/style.css
 
 body{font-family:serif}
---===============3348924911591116574==--
+--===============5403236779161813173==--

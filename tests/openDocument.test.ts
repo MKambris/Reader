@@ -95,3 +95,12 @@ describe('unsupported types', () => {
     await expect(openDocument(new File(['x'], 'thing.xyz'))).rejects.toBeInstanceOf(UnsupportedTypeError)
   })
 })
+
+describe('real-world EPUB quirks (IDPF epub3-samples)', () => {
+  it('skips a JPEG spine item and drops ruby annotations', async () => {
+    const text = allText(await openDocument(load('ruby-jpeg-spine.epub')))
+    expect(text).toContain('the clocks were striking thirteen')
+    expect(text).toContain('山路を登りながら、漢字。')
+    expect(text).not.toMatch(/やまみち|かん|\(|\)/)
+  })
+})

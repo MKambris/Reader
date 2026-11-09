@@ -37,3 +37,5 @@ Same as spec 01: `openDocument(file)`. Page view is checked in the browser test 
 8. In Page view on a 20-page PDF, no more than 5 page canvases exist at any time while scrolling.
 9. A book imported before this change (parser version 1) opens at its saved paragraph after it re-parses.
 10. In airplane mode, images and Page view work for previously imported books.
+11. Image-only EPUBs from the IDPF epub3-samples set (haruko-jpeg, page-blanche, page-blanche-bitmaps-in-spine, sous-le-vent, sous-le-vent_svg-in-spine, svg-in-spine) each open with at least one image block per spine page, including JPEG and SVG spine items. Today they open as a blank page.
+12. Importing `mahabharata.epub` (about 2,000 sections) keeps the page responsive, with no frame longer than 200 ms, and shows "Importing… N%" progress that rises at least once per second. Parsing yields to the UI between sections.
