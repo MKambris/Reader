@@ -5,13 +5,6 @@ export class DrmError extends Error {
   }
 }
 
-export class NoTextError extends Error {
-  constructor() {
-    super('This PDF has no readable text (scanned image).')
-    this.name = 'NoTextError'
-  }
-}
-
 export class UnsupportedTypeError extends Error {
   constructor(ext: string) {
     super(`Unsupported file type: .${ext || '?'}`)

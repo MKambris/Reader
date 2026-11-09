@@ -1,9 +1,9 @@
-import { NoTextError } from '../errors'
 import { textItems } from '../blocks'
+import { classifyPage, normalizeArabic, orderLine, type LineItem } from '../pdfText'
 import { makeYielder } from '../images'
 import type { OpenOptions, Parsed, ParsedSection } from '../types'
 
-type TextItem = { str: string; transform: number[]; height: number; hasEOL?: boolean }
+type TextItem = { str: string; transform: number[]; height: number; hasEOL?: boolean; dir?: string }
 
 let workerReady: Promise<void> | null = null
 export async function pdfjs() {
@@ -25,22 +25,27 @@ export async function pdfjs() {
 
 /** Group a page's text items into paragraphs using line breaks and vertical gaps. */
 function pageParagraphs(items: TextItem[]): string[] {
-  const lines: { y: number; h: number; text: string }[] = []
-  let cur: { y: number; h: number; text: string } | null = null
+  type Line = { y: number; h: number; items: LineItem[]; text: string }
+  const lines: Line[] = []
+  let cur: Line | null = null
+  const close = () => {
+    if (!cur) return
+    // Right-to-left lines come out in visual order; put them into reading order.
+    cur.text = normalizeArabic(orderLine(cur.items))
+    lines.push(cur)
+    cur = null
+  }
   for (const it of items) {
     const y = it.transform[5]
     const h = it.height || Math.abs(it.transform[3]) || 10
     if (!cur || Math.abs(cur.y - y) > h * 0.5) {
-      if (cur) lines.push(cur)
-      cur = { y, h, text: '' }
+      close()
+      cur = { y, h, items: [], text: '' }
     }
-    cur.text += it.str
-    if (it.hasEOL) {
-      lines.push(cur)
-      cur = null
-    }
+    cur.items.push({ str: it.str, x: it.transform[4], dir: it.dir })
+    if (it.hasEOL) close()
   }
-  if (cur) lines.push(cur)
+  close()
 
   const paras: string[] = []
   let buf: string[] = []
@@ -75,12 +80,18 @@ export async function parsePdf(file: Blob, opts: OpenOptions = {}): Promise<Pars
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i)
       const content = await page.getTextContent()
-      const texts = pageParagraphs((content.items as unknown[]).filter((x): x is TextItem => typeof x === "object" && x !== null && "str" in x))
-      sections.push({ title: `Page ${i}`, items: textItems(texts) })
+      const items = (content.items as unknown[]).filter((x): x is TextItem => typeof x === 'object' && x !== null && 'str' in x)
+      // Judge the reassembled text: raw items can be single glyphs that look like 1-letter junk.
+      const paras = pageParagraphs(items)
+      const quality = classifyPage(paras.join('\n'))
+      // Broken or missing text layers are read later by OCR (spec 01c); show the page meanwhile.
+      sections.push({
+        title: `Page ${i}`,
+        items: quality === 'ok' ? textItems(paras) : [{ kind: 'ocr', page: i }],
+      })
       opts.onProgress?.(i / pdf.numPages)
       await yieldNow()
     }
-    if (!sections.some(s => s.items.length)) throw new NoTextError()
     const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
     return { title: str(meta?.Title), author: str(meta?.Author), sections }
   } finally {

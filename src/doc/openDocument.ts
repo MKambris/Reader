@@ -45,9 +45,9 @@ export async function openDocument(file: File, opts: OpenOptions = {}): Promise<
     .map((s, si) => {
       let bi = 0, ii = 0
       const blocks: Block[] = s.items.map(it =>
-        it.kind === 'text'
-          ? { id: `s${si}b${bi++}`, kind: 'text', text: it.text }
-          : { id: `s${si}i${ii++}`, kind: 'image', blob: it.blob, alt: it.alt })
+        it.kind === 'text' ? { id: `s${si}b${bi++}`, kind: 'text', text: it.text }
+          : it.kind === 'image' ? { id: `s${si}i${ii++}`, kind: 'image', blob: it.blob, alt: it.alt }
+          : { id: `s${si}p0`, kind: 'ocr', page: it.page })
       return { title: s.title || `Section ${si + 1}`, blocks }
     })
     .filter(s => s.blocks.length)

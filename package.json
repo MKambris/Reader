@@ -13,7 +13,9 @@
     "preview": "vite preview",
     "typecheck": "tsc -p .",
     "smoke": "node scripts/smoke.mjs",
-    "fixtures": "python3 scripts/make_fixtures.py"
+    "fixtures": "python3 scripts/make_fixtures.py",
+    "predev": "node scripts/copy-ocr-assets.mjs",
+    "prebuild": "node scripts/copy-ocr-assets.mjs"
   },
   "keywords": [],
   "author": "",
@@ -30,9 +32,11 @@
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
+    "@tesseract.js-data/ara": "^1.0.0",
     "idb": "^8.0.4",
     "mammoth": "^1.13.0",
-    "pdfjs-dist": "^6.5.438"
+    "pdfjs-dist": "^6.5.438",
+    "tesseract.js": "^7.0.0"
   },
   "type": "module"
 }

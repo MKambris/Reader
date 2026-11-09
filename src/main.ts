@@ -2,6 +2,7 @@ import './style.css'
 import { Library, ensurePersisted, resolvePosition, type BookMeta } from './library/store'
 import type { Doc } from './doc/types'
 import { createPageView, type PageView } from './ui/pageView'
+import { ocrPlaceholder, startOcrView } from './ui/ocrView'
 
 const app = document.getElementById('app')!
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
@@ -51,7 +52,9 @@ async function showLibrary(message?: string) {
 function bookRow(b: BookMeta) {
   const li = el('li')
   const open = el('button', 'book')
-  open.append(el('span', 'title', b.title))
+  const t = el('span', 'title', b.title)
+  t.dir = 'auto'
+  open.append(t)
   if (b.author) open.append(el('span', 'author', b.author))
   open.onclick = () => showReader(b)
   const del = el('button', 'delete', 'Delete')
@@ -94,7 +97,9 @@ async function showReader(meta: BookMeta) {
   const header = el('header', 'bar')
   const back = el('button', '', '← Library')
   const toggle = el('button', 'view-toggle', 'Page view')
-  header.append(back, el('h1', 'reader-title', meta.title))
+  const h1 = el('h1', 'reader-title', meta.title)
+  h1.dir = 'auto'
+  header.append(back, h1)
   if (isPdf(meta)) header.append(toggle)
   const page = el('main', 'page')
   const pages = el('main', 'pdf-pages')
@@ -103,9 +108,11 @@ async function showReader(meta: BookMeta) {
 
   const urls: string[] = []
   let pageView: PageView | null = null
+  let ocr: { positionChanged(): void; destroy(): void } | null = null
   const cleanup = () => {
     urls.forEach(u => URL.revokeObjectURL(u))
     pageView?.destroy()
+    ocr?.destroy()
   }
 
   let doc: Doc
@@ -120,7 +127,9 @@ async function showReader(meta: BookMeta) {
 
   const blocks: HTMLElement[] = []
   for (const s of doc.sections) {
-    page.append(el('h2', 'section', s.title))
+    const h = el('h2', 'section', s.title)
+    h.dir = 'auto'
+    page.append(h)
     for (const b of s.blocks) {
       let node: HTMLElement
       if (b.kind === 'image') {
@@ -133,8 +142,11 @@ async function showReader(meta: BookMeta) {
         img.loading = 'lazy'
         img.decoding = 'async'
         node.append(img)
+      } else if (b.kind === 'ocr') {
+        node = ocrPlaceholder(b.page)
       } else {
         node = el('p', 'block', b.text)
+        node.dir = 'auto' // Arabic/Hebrew paragraphs align right and flow right-to-left
       }
       node.dataset.id = b.id
       page.append(node)
@@ -215,10 +227,17 @@ async function showReader(meta: BookMeta) {
     save()
   }
 
+  // Spec 01c: pages with broken/missing text are OCR'd in the background, nearest first.
+  ocr = await startOcrView({ lib, bookId: meta.id, page, blocks, headerBottom, topIndex: topBlockIndex })
+  if (token !== renderToken) return cleanup()
+
   let timer: number | undefined
   const onScroll = () => {
     clearTimeout(timer)
-    timer = window.setTimeout(save, 300)
+    timer = window.setTimeout(() => {
+      save()
+      ocr?.positionChanged()
+    }, 300)
   }
   const onHide = () => document.visibilityState === 'hidden' && save()
   window.addEventListener('scroll', onScroll, { passive: true })

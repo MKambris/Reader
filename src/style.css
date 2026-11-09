@@ -39,3 +39,11 @@ button.primary { background: var(--accent); color: #000; border: 0; font-weight:
 .pdf-pages { max-width: 60rem; margin: 0 auto; padding: .5rem .5rem calc(100vh - 5rem); }
 .pdf-page { width: 100%; background: #111; margin: 0 0 .5rem; }
 .pdf-page canvas { width: 100%; height: auto; display: block; background: #fff; }
+/* Spec 01c: pages waiting for (or without) OCR. Native scroll anchoring is off because we
+   compensate manually when a page image is swapped for its text. */
+.page { overflow-anchor: none; }
+.block.ocr-page { margin: 0 0 1em; background: #111; position: relative; overflow: hidden; }
+.block.ocr-page canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #fff; }
+.block.ocr-page figcaption { position: absolute; left: 0; right: 0; bottom: 0; color: #ddd; background: rgba(0,0,0,.65); font-size: .9rem; padding: .4rem; text-align: center; z-index: 1; }
+.ocr-banner { border: 1px solid #333; border-radius: 10px; padding: .75rem; margin: 0 0 1rem; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.ocr-banner p { margin: 0; flex: 1 1 100%; font-size: 1rem; }

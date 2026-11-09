@@ -1,5 +1,5 @@
 /** Bump whenever block extraction changes in a way that could alter block ids or content. */
-export const PARSER_VERSION = 2
+export const PARSER_VERSION = 3
 
 export interface TextBlock {
   id: string
@@ -14,7 +14,15 @@ export interface ImageBlock {
   alt: string
 }
 
-export type Block = TextBlock | ImageBlock
+/** A PDF page whose text layer is broken or missing: shown as an image until OCR fills it in. */
+export interface OcrBlock {
+  id: string
+  kind: 'ocr'
+  /** 1-based PDF page number. */
+  page: number
+}
+
+export type Block = TextBlock | ImageBlock | OcrBlock
 
 export interface Section {
   title: string
@@ -47,7 +55,10 @@ export interface RawSection {
 }
 
 /** Internal: a section after images are resolved to Blobs, before ids are assigned. */
-export type ParsedItem = { kind: 'text'; text: string } | { kind: 'image'; blob: Blob; alt: string }
+export type ParsedItem =
+  | { kind: 'text'; text: string }
+  | { kind: 'image'; blob: Blob; alt: string }
+  | { kind: 'ocr'; page: number }
 export interface ParsedSection {
   title?: string
   items: ParsedItem[]

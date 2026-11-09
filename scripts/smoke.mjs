@@ -2,7 +2,7 @@
 // Needs Chrome at /usr/bin/google-chrome (or CHROME env var).
 import { chromium } from 'playwright-core'
 import { join } from 'node:path'
-import { existsSync, mkdtempSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 
 const URL = process.argv[2] ?? 'http://localhost:4173/'
@@ -130,6 +130,11 @@ await importOnly('svg-script.epub')
 const svgs = await imagesLoaded()
 check('01b AC6 SVGs render, scripts inert', svgs.filter(x => x.w > 0).length >= 3 && await page.evaluate(() => window.__pwned === undefined), JSON.stringify(svgs))
 
+// Right-to-left text (Arabic) aligns right.
+await importOnly('arabic.txt')
+const rtl = await page.evaluate(() => [...document.querySelectorAll('.block')].map(b => getComputedStyle(b).direction))
+check('Arabic paragraphs are right-to-left', rtl.length > 0 && rtl.every(d => d === 'rtl'), rtl.join(','))
+
 // AC7/AC8: PDF page view.
 await importOnly('long.pdf')
 check('01b AC7 Page view button on PDF', (await page.locator('.view-toggle').count()) === 1)
@@ -188,6 +193,86 @@ if (existsSync(MAHA)) {
   check('01b AC12 no frame over 200ms', longest <= 200, `longest task ${Math.round(longest)}ms`)
 } else console.log('SKIP 01b AC12 (mahabharata sample not present)')
 
+// ---------- Spec 01c: Arabic PDFs & OCR ----------
+const AR_WORDS = ['القراءة', 'المكتبة', 'القهوة']
+const pageText = (pageNo) => page.evaluate(n => [...document.querySelectorAll(`.block[data-id^="s${n - 1}b"]`)].map(b => b.textContent).join(' '), pageNo)
+const waitForOcrText = async (pageNo, timeout) => {
+  const t0 = Date.now()
+  await page.waitForFunction(n => document.querySelector(`.block[data-id^="s${n - 1}b"]`), pageNo, { timeout })
+  return Date.now() - t0
+}
+const quality = (t) => {
+  const words = t.split(/\s+/).filter(w => /\p{L}/u.test(w))
+  // Arabic letters plus vowel marks (Script=Inherited), digits and punctuation.
+  const arabic = words.filter(w => /^[\p{Script=Arabic}\p{M}\p{N}\p{P}\p{S}]+$/u.test(w) && /\p{Script=Arabic}/u.test(w)).length
+  return { words: words.length, arabicShare: arabic / Math.max(1, words.length), latin: /[A-Za-z]/.test(t), replacement: t.includes('\uFFFD') }
+}
+
+// AC1 in the browser: a good Arabic PDF reads as text, right-to-left.
+await importOnly('arabic-good.pdf')
+check('01c AC1 good Arabic PDF has no OCR pages', (await page.locator('.ocr-page').count()) === 0)
+
+// AC2 + consent: a scanned PDF opens; nothing downloads until the user agrees.
+await importOnly('arabic-scanned.pdf')
+check('01c AC2 scanned PDF opens with a page image', (await page.locator('.ocr-page').count()) === 1)
+await page.waitForSelector('.ocr-page canvas', { timeout: 15000 })
+const ocrFetchedEarly = await page.evaluate(() => performance.getEntriesByType('resource').some(e => e.name.includes('/ocr/')))
+check('01c OCR not downloaded before consent', !ocrFetchedEarly)
+await page.locator('.ocr-banner button.primary').click()
+const firstMs = await waitForOcrText(1, 120000)
+const q1 = quality(await pageText(1))
+check('01c OCR reads the scanned Arabic page', q1.arabicShare >= 0.95 && !q1.latin && !q1.replacement,
+  `${firstMs}ms ${JSON.stringify(q1)}`)
+const scannedText = await pageText(1)
+check('01c OCR text contains the fixture sentences', AR_WORDS.every(w => scannedText.includes(w)), scannedText.slice(0, 80))
+check('01c OCR text is right-to-left', await page.evaluate(() => getComputedStyle(document.querySelector('.block[data-id^="s0b"]')).direction === 'rtl'))
+
+// AC5: page swaps to text without moving what's on screen. Read page 2 while page 1 is still pending.
+await importOnly('arabic-broken.pdf')
+await page.evaluate(() => {
+  const box = document.querySelector('.ocr-page[data-ocr-page="2"]')
+  window.scrollBy(0, box.getBoundingClientRect().top - document.querySelector('.bar').getBoundingClientRect().bottom)
+})
+await page.waitForTimeout(400) // let the scroll handler report the reading position
+const topBefore = await page.evaluate(() => document.querySelector('.ocr-page[data-ocr-page="2"]').getBoundingClientRect().top)
+await waitForOcrText(2, 120000)
+const topAfter = await page.evaluate(() => document.querySelector('.block[data-id="s1b0"]').getBoundingClientRect().top)
+check('01c AC5 swap keeps the reading spot still', Math.abs(topAfter - topBefore) <= 2, `before=${topBefore} after=${topAfter}`)
+await waitForOcrText(1, 120000)
+const topLater = await page.evaluate(() => document.querySelector('.block[data-id="s1b0"]').getBoundingClientRect().top)
+check('01c AC5 swap of the page above does not move it either', Math.abs(topLater - topBefore) <= 2, `after page 1 swapped: ${topLater}`)
+
+// AC7: one page in under 15 s with the CPU throttled x4 (model already cached).
+await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+await importOnly('arabic-scanned.pdf')
+const throttledMs = await waitForOcrText(1, 60000)
+await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
+check('01c AC7 OCR page under 15 s at 4x CPU throttle', throttledMs < 15000, `${throttledMs}ms`)
+
+// AC6 (local only): the user's own PDFs, never committed.
+const USER_A = '/home/claude/samples/user/a.pdf', USER_B = '/home/claude/samples/user/b.pdf'
+if (existsSync(USER_A) && existsSync(USER_B)) {
+  for (const [file, pageNo] of [[USER_A, 8], [USER_B, 20]]) {
+    await importOnly(file)
+    await page.evaluate(n => {
+      const box = document.querySelector(`.ocr-page[data-ocr-page="${n}"]`)
+      window.scrollBy(0, box.getBoundingClientRect().top - document.querySelector('.bar').getBoundingClientRect().bottom)
+    }, pageNo)
+    await page.waitForTimeout(400)
+    const ms = await waitForOcrText(pageNo, 180000)
+    const t = await pageText(pageNo)
+    const q = quality(t)
+    const ok = q.arabicShare >= 0.95 && !q.latin && !q.replacement
+    check(`01c AC6 user PDF ${file.endsWith('a.pdf') ? 'A' : 'B'} page ${pageNo}`, ok, `${ms}ms words=${q.words} arabic=${(q.arabicShare * 100).toFixed(1)}% latin=${q.latin} repl=${q.replacement}`)
+    // Expected title lives next to the (uncommitted) user PDFs, hand-checked against the page image.
+    const titleFile = '/home/claude/samples/user/a8-title.txt'
+    if (file === USER_A && existsSync(titleFile)) {
+      const title = readFileSync(titleFile, 'utf8').trim()
+      check('01c AC6 user PDF A page 8 title line exact', t.startsWith(title), `got ${t.length} chars`)
+    }
+  }
+} else console.log('SKIP 01c AC6 (user PDFs not present)')
+
 // Leave a book with an image + the PDF in the library for the offline checks.
 await importOnly('book.epub', 'long.pdf')
 await backToLibrary()
@@ -208,6 +293,10 @@ await page.waitForSelector('.block')
 await page.locator('.view-toggle').click()
 await page.waitForSelector('.pdf-page canvas', { timeout: 15000 }).catch(() => null)
 check('01b AC10 page view works offline', (await page.locator('.pdf-page canvas').count()) > 0)
+// 01c AC8: OCR works offline once the model is cached, on a newly imported broken PDF.
+await importOnly('arabic-broken.pdf')
+const offlineMs = await waitForOcrText(1, 120000).catch(() => -1)
+check('01c AC8 OCR works offline', offlineMs >= 0, `${offlineMs}ms`)
 await ctx.setOffline(false)
 
 check('no page errors', errors.length === 0, errors.join(' | '))

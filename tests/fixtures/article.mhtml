@@ -1,11 +1,11 @@
 Content-Type: multipart/related; type="text/html";
- boundary="===============2049348187045922531=="
+ boundary="===============3094350983591389092=="
 MIME-Version: 1.0
 From: <Saved by Blink>
 Snapshot-Content-Location: https://news.example.com/reading-aloud
 Subject: Reading Aloud Helps, Study Finds
 
---===============2049348187045922531==
+--===============3094350983591389092==
 Content-Type: text/html; charset="utf-8"
 MIME-Version: 1.0
 Content-Transfer-Encoding: quoted-printable
@@ -37,14 +37,14 @@ rial.</p>
 a> <a href=3D"/2">Contact us</a> </footer>
 </body></html>
 
---===============2049348187045922531==
+--===============3094350983591389092==
 Content-Type: text/css; charset="us-ascii"
 MIME-Version: 1.0
 Content-Transfer-Encoding: 7bit
 Content-Location: https://news.example.com/style.css
 
 body{font-family:serif}
---===============2049348187045922531==
+--===============3094350983591389092==
 Content-Type: image/png
 MIME-Version: 1.0
 Content-Transfer-Encoding: base64
@@ -480,4 +480,4 @@ L9HIPIhhgv16xUT8nVPYzqXMZAn+kT703gRpcOIak2Hv29X6yxCyRNzgBfbrTHWWuy56+R7J68za
 0bYwfebe61jxcPtdko3JFc/FrBaEJ9XYzy8BJwvbNQW6ZWFbZKux7cFMhI3+sP017m0K8Ez3IHCx
 U9/xuLFeII2LXV16EhzNTOyQUaTR/wEf+VvuRGY3PAAAAABJRU5ErkJggg==
 
---===============2049348187045922531==--
+--===============3094350983591389092==--

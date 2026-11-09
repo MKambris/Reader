@@ -28,7 +28,16 @@ export default defineConfig({
       workbox: {
         // Precache everything so the app (incl. the PDF worker) runs fully offline.
         globPatterns: ['**/*.{js,mjs,css,html,png,svg,wasm,webmanifest}'],
+        // OCR files (~5.6 MB) are fetched only after the user agrees, then cached for offline use.
+        globIgnores: ['ocr/**'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/ocr/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'ocr-assets', expiration: { maxEntries: 10 } },
+          },
+        ],
       },
     }),
   ],

@@ -166,6 +166,46 @@ def make_long_pdf(path: Path, pages: int):
     c.save()
 
 
+# Original Arabic sentences written for the fixtures (not taken from any book).
+ARABIC_LINES = [
+    "القراءة بصوت عال تساعد على الفهم والتذكر.",
+    "يجلس الطالب في المكتبة ويقرأ كتابا جديدا كل أسبوع.",
+    "استخدمت برنامج Reader على هاتفي لقراءة الكتب.",
+    "في الصباح نشرب القهوة ثم نبدأ العمل بنشاط.",
+]
+
+
+def make_arabic_pdfs():
+    """arabic-good.pdf (Chrome print, real ToUnicode), arabic-broken.pdf (ToUnicode stripped),
+    arabic-scanned.pdf (page images only, for real OCR in the browser test)."""
+    import pikepdf
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        paras = "".join(f"<p>{l}</p>" for l in ARABIC_LINES)
+        # Two pages so classification and ordering are checked per page.
+        html = (f'<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'
+                f'<style>body{{font-family:"DejaVu Sans";font-size:22pt}} .pb{{page-break-after:always}}</style>'
+                f'</head><body><div class="pb">{paras}</div><div>{paras}</div></body></html>')
+        (td / "ar.html").write_text(html, encoding="utf-8")
+        chrome = os.environ.get("CHROME", "/usr/bin/google-chrome")
+        subprocess.run([chrome, "--headless", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
+                        f"--print-to-pdf={OUT / 'arabic-good.pdf'}", f"file://{td / 'ar.html'}"],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Broken: drop every font's ToUnicode map so extracted letters are wrong/missing.
+        with pikepdf.open(OUT / "arabic-good.pdf") as pdf:
+            for page in pdf.pages:
+                for _, font in (page.Resources.get("/Font") or {}).items():
+                    for f in [font] + list(font.get("/DescendantFonts") or []):
+                        if "/ToUnicode" in f:
+                            del f["/ToUnicode"]
+            pdf.save(OUT / "arabic-broken.pdf")
+        # Scanned: rasterize page 1 at 200 dpi and wrap it as an image-only PDF.
+        run("pdftoppm", "-r", "200", "-gray", "-png", "-f", "1", "-l", "1", "-singlefile",
+            str(OUT / "arabic-good.pdf"), str(td / "scan"))
+        import img2pdf
+        (OUT / "arabic-scanned.pdf").write_bytes(img2pdf.convert(str(td / "scan.png")))
+
+
 def make_scanned_pdf(path: Path):
     from PIL import Image, ImageDraw
     from reportlab.lib.pagesizes import letter
@@ -219,6 +259,7 @@ def main():
         "\n\n".join([TITLE] + [h + "\n\n" + "\n\n".join(ps) for h, ps in CHAPTERS]) + "\n"
     )
     make_pdf(OUT / "book.pdf")
+    (OUT / "arabic.txt").write_text("القراءة بصوت عال\n\nأتأمل الصورة الآتية، وما تحكيه الجمل أمامها.\n", encoding="utf-8")
     make_scanned_pdf(OUT / "scanned.pdf")
 
     html = article_html()
@@ -290,6 +331,8 @@ def main():
             d = d.replace(b"</body>", b'<p><img src="../media/evil.svg" alt="Evil SVG"/></p>' + svg + b"</body>")
         return d
     rewrite_zip(OUT / "book.epub", OUT / "svg-script.epub", svg_inject)
+
+    make_arabic_pdfs()
 
     for p in sorted(OUT.iterdir()):
         print(f"{p.name:16} {p.stat().st_size:>8}")

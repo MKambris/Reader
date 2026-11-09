@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { openDocument } from '../src/doc/openDocument'
-import { DrmError, NoTextError, UnsupportedTypeError } from '../src/doc/errors'
+import { DrmError, UnsupportedTypeError } from '../src/doc/errors'
 
 const FIX = join(__dirname, 'fixtures')
 const load = (name: string) => new File([readFileSync(join(FIX, name))], name)
@@ -56,11 +56,7 @@ describe('AC3 DRM', () => {
   })
 })
 
-describe('AC4 scanned PDF', () => {
-  it('rejects with NoTextError', async () => {
-    await expect(openDocument(load('scanned.pdf'))).rejects.toBeInstanceOf(NoTextError)
-  })
-})
+// Spec 01 AC4 (scanned PDFs rejected) is superseded by spec 01c: see arabicPdf.test.ts.
 
 describe('AC5 article extraction', () => {
   it.each(ARTICLES)('%s keeps body, drops chrome', async name => {

@@ -48,7 +48,25 @@ describe('delete (AC8)', () => {
     await lib.deleteBook(id)
     const reopened = await Library.open(lib.name)
     expect(await reopened.listBooks()).toEqual([])
-    expect(await reopened.rawCounts(id)).toEqual({ books: 0, files: 0, docs: 0, positions: 0 })
+    expect(await reopened.rawCounts(id)).toEqual({ books: 0, files: 0, docs: 0, positions: 0, ocr: 0 })
+  })
+})
+
+describe('OCR cache (spec 01c)', () => {
+  it('fills OCR text into the doc, keeps the reading page, and is deleted with the book', async () => {
+    const { id } = await lib.importFile(load('arabic-broken.pdf'))
+    const before = await lib.loadDoc(id)
+    expect(before.sections.map(s => s.blocks[0].kind)).toEqual(['ocr', 'ocr'])
+    await lib.savePosition(id, { blockId: 's1p0', fraction: 1 })
+    await lib.ocrCache(id, 'fake').put(2, 'سطر أول\nتابع\n\nفقرة')
+    const after = await lib.loadDoc(id)
+    expect(after.sections[1].blocks).toEqual([
+      { id: 's1b0', kind: 'text', text: 'سطر أول تابع' },
+      { id: 's1b1', kind: 'text', text: 'فقرة' },
+    ])
+    expect(resolvePosition(after, await lib.getPosition(id))).toBe('s1b0')
+    await lib.deleteBook(id)
+    expect((await lib.rawCounts(id)).ocr).toBe(0)
   })
 })
 
