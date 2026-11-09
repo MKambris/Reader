@@ -1,0 +1,13 @@
+Fixture Book
+
+Chapter One
+
+It was a bright cold day in April, and the clocks were striking thirteen.
+
+The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster had been tacked to the wall.
+
+Chapter Two
+
+The second chapter begins here with a sentence that is long enough to wrap.
+
+A final paragraph closes the book.

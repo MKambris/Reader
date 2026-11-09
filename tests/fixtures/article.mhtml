@@ -1,0 +1,43 @@
+Content-Type: multipart/related; type="text/html";
+ boundary="===============3348924911591116574=="
+MIME-Version: 1.0
+From: <Saved by Blink>
+Snapshot-Content-Location: https://news.example.com/reading-aloud
+Subject: Reading Aloud Helps, Study Finds
+
+--===============3348924911591116574==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://news.example.com/reading-aloud
+
+<!DOCTYPE html>
+<html><head><meta charset=3D"utf-8"><title>Reading Aloud Helps, Study Finds=
+</title></head>
+<body>
+<header><nav><ul><li><a href=3D"/home">Home</a></li><li><a href=3D"/world">=
+World</a></li><li><a href=3D"/technology">Technology</a></li><li><a href=3D=
+"/subscribe now">Subscribe now</a></li></ul></nav></header>
+<aside class=3D"ad">Advertisement: Buy the best headphones today</aside>
+<main><article>
+<h1>Reading Aloud Helps, Study Finds</h1>
+<p class=3D"byline">By Jane Reporter</p>
+<p>Researchers announced today that reading aloud improves comprehension fo=
+r many listeners.</p><p>The study followed two hundred participants over si=
+x months and measured recall after each session.</p><p>Participants who lis=
+tened while following the text remembered noticeably more than those who on=
+ly read silently.</p><p>The authors caution that the effect varied widely b=
+etween individuals and between kinds of material.</p>
+</article></main>
+<footer><a href=3D"/0">Privacy policy</a> <a href=3D"/1">Terms of service</=
+a> <a href=3D"/2">Contact us</a> </footer>
+</body></html>
+
+--===============3348924911591116574==
+Content-Type: text/css; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Location: https://news.example.com/style.css
+
+body{font-family:serif}
+--===============3348924911591116574==--
