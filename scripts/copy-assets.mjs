@@ -1,6 +1,8 @@
-// Copy Tesseract.js worker, core WASM builds and Arabic model into public/ocr/,
-// so OCR is served from the app's own origin (no CDN; works offline once cached).
-import { copyFileSync, mkdirSync, readdirSync } from 'node:fs'
+// Copy runtime assets into public/ so they're served from the app's own origin:
+// - public/ocr/: Tesseract.js worker, core WASM builds and the Arabic model (spec 01c)
+// - public/pdfjs/: PDF.js decoders (JBIG2/JPEG 2000/ICC wasm), CMaps, standard fonts.
+//   Without these, scanned PDFs (usually JBIG2) render as black pages.
+import { copyFileSync, cpSync, mkdirSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 
@@ -18,3 +20,10 @@ copyFileSync(join(tjs, 'dist', 'worker.min.js'), join(out, 'worker.min.js'))
 for (const f of readdirSync(core)) if (/^tesseract-core.*-?lstm\.wasm\.js$/.test(f)) copyFileSync(join(core, f), join(out, f))
 copyFileSync(join(ara, '4.0.0_best_int', 'ara.traineddata.gz'), join(out, 'ara.traineddata.gz'))
 console.log('OCR assets ->', out, readdirSync(out).join(', '))
+
+const pdfjs = dirname(require.resolve('pdfjs-dist/package.json'))
+const pdfOut = join(root, 'public', 'pdfjs')
+for (const dir of ['wasm', 'cmaps', 'standard_fonts', 'iccs']) {
+  cpSync(join(pdfjs, dir), join(pdfOut, dir), { recursive: true })
+}
+console.log('PDF.js assets ->', pdfOut, readdirSync(pdfOut).join(', '))

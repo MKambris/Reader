@@ -1,4 +1,4 @@
-import { pdfjs } from '../doc/formats/pdf'
+import { pdfjs, pdfParams } from '../doc/formats/pdf'
 
 export interface PageView {
   /** 1-based page whose box is at the top of the viewport (below `topOffset`). */
@@ -18,7 +18,7 @@ export async function createPageView(
   topOffset: () => number,
 ): Promise<PageView> {
   const lib = await pdfjs()
-  const task = lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), useSystemFonts: true })
+  const task = lib.getDocument(await pdfParams(new Uint8Array(await file.arrayBuffer())))
   const pdf = await task.promise
   const first = (await pdf.getPage(1)).getViewport({ scale: 1 })
 

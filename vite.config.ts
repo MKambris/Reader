@@ -27,11 +27,18 @@ export default defineConfig({
       },
       workbox: {
         // Precache everything so the app (incl. the PDF worker) runs fully offline.
-        globPatterns: ['**/*.{js,mjs,css,html,png,svg,wasm,webmanifest}'],
+        // PDF.js decoders + standard fonts are precached so scans open offline;
+        // CMaps (~170 small files) are cached on first use instead.
+        globPatterns: ['**/*.{js,mjs,css,html,png,svg,wasm,webmanifest,pfb,ttf,icc}'],
         // OCR files (~5.6 MB) are fetched only after the user agrees, then cached for offline use.
-        globIgnores: ['ocr/**'],
+        globIgnores: ['ocr/**', 'pdfjs/cmaps/**'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/pdfjs/cmaps/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'pdfjs-cmaps', expiration: { maxEntries: 200 } },
+          },
           {
             urlPattern: ({ url }) => url.pathname.includes('/ocr/'),
             handler: 'CacheFirst',

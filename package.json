@@ -14,8 +14,8 @@
     "typecheck": "tsc -p .",
     "smoke": "node scripts/smoke.mjs",
     "fixtures": "python3 scripts/make_fixtures.py",
-    "predev": "node scripts/copy-ocr-assets.mjs",
-    "prebuild": "node scripts/copy-ocr-assets.mjs"
+    "predev": "node scripts/copy-assets.mjs",
+    "prebuild": "node scripts/copy-assets.mjs"
   },
   "keywords": [],
   "author": "",

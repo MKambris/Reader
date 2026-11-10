@@ -22,6 +22,9 @@ const page = ctx.pages()[0] ?? await ctx.newPage()
 const errors = []
 page.on('pageerror', e => errors.push(e.message))
 page.on('console', m => m.type() === 'error' && errors.push(m.text()))
+// PDF.js reports missing decoders as *warnings*; a scanned PDF then renders black (JBIG2 bug).
+const decoderWarnings = []
+page.on('console', m => /wasmUrl|Jbig2Error|JpxError|failed to initialize|nowasm_fallback/i.test(m.text()) && decoderWarnings.push(m.text().slice(0, 160)))
 
 await page.goto(URL)
 await page.waitForSelector('text=Library')
@@ -299,6 +302,9 @@ const offlineMs = await waitForOcrText(1, 120000).catch(() => -1)
 check('01c AC8 OCR works offline', offlineMs >= 0, `${offlineMs}ms`)
 await ctx.setOffline(false)
 
+check('no PDF.js decoder warnings (JBIG2/JPX/ICC)', decoderWarnings.length === 0, decoderWarnings.slice(0, 3).join(' | '))
+const decoderServed = await page.evaluate(async () => (await fetch('pdfjs/wasm/jbig2.wasm')).ok)
+check('PDF.js JBIG2 decoder is served by the app', decoderServed)
 check('no page errors', errors.length === 0, errors.join(' | '))
 await ctx.close()
 process.exit(results.every(r => r.ok) ? 0 : 1)

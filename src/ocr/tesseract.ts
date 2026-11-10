@@ -1,5 +1,5 @@
 import { createWorker, OEM, type Worker } from 'tesseract.js'
-import { pdfjs } from '../doc/formats/pdf'
+import { pdfjs, pdfParams } from '../doc/formats/pdf'
 import type { OcrEngine } from './queue'
 
 /** Rough first-use download: core WASM (~3.9 MB) + Arabic model (~1.7 MB). */
@@ -20,7 +20,7 @@ export interface PdfPages {
 
 export async function openPdfPages(file: Blob): Promise<PdfPages> {
   const lib = await pdfjs()
-  const task = lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), useSystemFonts: true })
+  const task = lib.getDocument(await pdfParams(new Uint8Array(await file.arrayBuffer())))
   const pdf = await task.promise
   return {
     numPages: pdf.numPages,

@@ -6,6 +6,38 @@ import type { OpenOptions, Parsed, ParsedSection } from '../types'
 type TextItem = { str: string; transform: number[]; height: number; hasEOL?: boolean; dir?: string }
 
 let workerReady: Promise<void> | null = null
+/**
+ * Where PDF.js finds its decoders and data. Without `wasmUrl`, JBIG2 (most black-and-white
+ * scans), JPEG 2000 and ICC colour images fail to decode and pages render black.
+ * Browser: served from our own origin (scripts/copy-assets.mjs). Node (tests): the package dir.
+ */
+let assetBase: Promise<string> | null = null
+async function pdfAssetBase(): Promise<string> {
+  assetBase ??= (async () => {
+    if (typeof process !== 'undefined' && process.versions?.node) {
+      const { createRequire } = await import('node:module')
+      const { dirname } = await import('node:path')
+      return dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json')) + '/'
+    }
+    return new URL(`${import.meta.env.BASE_URL}pdfjs/`, location.href).href
+  })()
+  return assetBase
+}
+
+/** The one way to open a PDF in this app; always includes the decoder/data locations. */
+export async function pdfParams(data: Uint8Array) {
+  const base = await pdfAssetBase()
+  return {
+    data,
+    useSystemFonts: true,
+    wasmUrl: base + 'wasm/',
+    cMapUrl: base + 'cmaps/',
+    cMapPacked: true,
+    standardFontDataUrl: base + 'standard_fonts/',
+    iccUrl: base + 'iccs/',
+  }
+}
+
 export async function pdfjs() {
   const lib = await import('pdfjs-dist/legacy/build/pdf.mjs')
   workerReady ??= (async () => {
@@ -71,7 +103,7 @@ function pageParagraphs(items: TextItem[]): string[] {
 export async function parsePdf(file: Blob, opts: OpenOptions = {}): Promise<Parsed> {
   const lib = await pdfjs()
   const data = new Uint8Array(await file.arrayBuffer())
-  const task = lib.getDocument({ data, useSystemFonts: true })
+  const task = lib.getDocument(await pdfParams(data))
   const pdf = await task.promise
   try {
     const meta = (await pdf.getMetadata().catch(() => null))?.info as Record<string, unknown> | undefined
