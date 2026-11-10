@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Library, resolvePosition } from '../src/library/store'
 import { UnsupportedTypeError } from '../src/doc/errors'
 import { PARSER_VERSION, type Doc } from '../src/doc/types'
+import { OCR_ENGINE_VERSION } from '../src/ocr/version'
 
 // fake-indexeddb clones with Node's structuredClone, which can't clone jsdom's Blob/File
 // (a real browser can). Use Node's own Blob/File so stored files round-trip like in Chrome.
@@ -58,7 +59,12 @@ describe('OCR cache (spec 01c)', () => {
     const before = await lib.loadDoc(id)
     expect(before.sections.map(s => s.blocks[0].kind)).toEqual(['ocr', 'ocr'])
     await lib.savePosition(id, { blockId: 's1p0', fraction: 1 })
-    await lib.ocrCache(id, 'fake').put(2, 'سطر أول\nتابع\n\nفقرة')
+    // Text saved by an older OCR setup (e.g. from black JBIG2 renders) is ignored...
+    await lib.ocrCache(id, 'old-engine').put(2, '')
+    expect((await lib.loadDoc(id)).sections[1].blocks[0].kind).toBe('ocr')
+    expect(await lib.ocrCache(id, OCR_ENGINE_VERSION).get(2)).toBeUndefined()
+    // ...and replaced by text from the current one.
+    await lib.ocrCache(id, OCR_ENGINE_VERSION).put(2, 'سطر أول\nتابع\n\nفقرة')
     const after = await lib.loadDoc(id)
     expect(after.sections[1].blocks).toEqual([
       { id: 's1b0', kind: 'text', text: 'سطر أول تابع' },

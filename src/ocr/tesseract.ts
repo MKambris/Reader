@@ -4,7 +4,8 @@ import type { OcrEngine } from './queue'
 
 /** Rough first-use download: core WASM (~3.9 MB) + Arabic model (~1.7 MB). */
 export const OCR_DOWNLOAD_MB = 5.6
-export const ENGINE_VERSION = 'tesseract.js-7/ara-4.0.0_best_int'
+export { OCR_ENGINE_VERSION as ENGINE_VERSION } from './version'
+import { OCR_ENGINE_VERSION } from './version'
 
 /** Target bitmap width for OCR (~200 dpi for a letter/A4 page). */
 const OCR_WIDTH = 1700
@@ -22,13 +23,33 @@ export async function openPdfPages(file: Blob): Promise<PdfPages> {
   const lib = await pdfjs()
   const task = lib.getDocument(await pdfParams(new Uint8Array(await file.arrayBuffer())))
   const pdf = await task.promise
+  // Renders still running when the reader closes; destroy() waits for them, because tearing
+  // down PDF.js mid-render throws "Cannot read properties of null (reading 'postMessage')".
+  const inflight = new Set<Promise<unknown>>()
+  let closed = false
+  const track = <T>(p: Promise<T>): Promise<T> => {
+    inflight.add(p)
+    return p.finally(() => inflight.delete(p))
+  }
   return {
     numPages: pdf.numPages,
     async aspect(pageNo) {
-      const v = (await pdf.getPage(pageNo)).getViewport({ scale: 1 })
+      if (closed) throw new Error('PDF closed')
+      const v = (await track(pdf.getPage(pageNo))).getViewport({ scale: 1 })
       return v.width / v.height
     },
-    async render(pageNo, width) {
+    render: (pageNo, width) => {
+      if (closed) return Promise.reject(new Error('PDF closed'))
+      return track(renderPage(pageNo, width))
+    },
+    async destroy() {
+      closed = true
+      await Promise.allSettled([...inflight])
+      await task.destroy()
+    },
+  }
+
+  async function renderPage(pageNo: number, width: number): Promise<HTMLCanvasElement> {
       const page = await pdf.getPage(pageNo)
       const base = page.getViewport({ scale: 1 })
       const viewport = page.getViewport({ scale: width / base.width })
@@ -37,8 +58,6 @@ export async function openPdfPages(file: Blob): Promise<PdfPages> {
       canvas.height = Math.floor(viewport.height)
       await page.render({ canvas, canvasContext: canvas.getContext('2d')!, viewport } as any).promise
       return canvas
-    },
-    destroy: () => task.destroy(),
   }
 }
 
@@ -57,17 +76,34 @@ export async function createTesseractEngine(pages: PdfPages): Promise<OcrEngine 
     workerBlobURL: false,
     cacheMethod: 'none', // the service worker caches /ocr/ files; avoid a second IndexedDB copy
   })
+  let job: Promise<unknown> | null = null
+  let dead = false
   return {
-    version: ENGINE_VERSION,
+    version: OCR_ENGINE_VERSION,
     async recognize(page) {
-      const canvas = await pages.render(page, OCR_WIDTH)
+      if (dead) throw new Error('OCR stopped')
+      const run = (async () => {
+        const canvas = await pages.render(page, OCR_WIDTH)
+        try {
+          if (dead) throw new Error('OCR stopped')
+          const { data } = await worker.recognize(canvas)
+          return data.text
+        } finally {
+          canvas.width = canvas.height = 0
+        }
+      })()
+      job = run
       try {
-        const { data } = await worker.recognize(canvas)
-        return data.text
+        return await run
       } finally {
-        canvas.width = canvas.height = 0
+        if (job === run) job = null
       }
     },
-    terminate: async () => void (await worker.terminate()),
+    /** Waits for the page being read, then stops the worker (same mid-job crash as above). */
+    async terminate() {
+      dead = true
+      await job?.catch(() => {})
+      await worker.terminate()
+    },
   }
 }

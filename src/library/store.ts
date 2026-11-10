@@ -3,6 +3,7 @@ import { isSupported, extensionOf, openDocument } from '../doc/openDocument'
 import { UnsupportedTypeError } from '../doc/errors'
 import { PARSER_VERSION, type Doc } from '../doc/types'
 import type { OcrCache } from '../ocr/queue'
+import { OCR_ENGINE_VERSION } from '../ocr/version'
 import { applyOcr, cleanOcrText } from '../ocr/text'
 
 export interface BookMeta {
@@ -82,14 +83,18 @@ export class Library {
   }
 
   private async ocrPages(id: string): Promise<Map<number, string[]>> {
-    const recs = await this.db.getAll('ocr', ocrRange(id))
+    // Only text from the current OCR setup; older results are re-read (see ocr/version.ts).
+    const recs = (await this.db.getAll('ocr', ocrRange(id))).filter(r => r.engine === OCR_ENGINE_VERSION)
     return new Map(recs.map(r => [r.page as number, cleanOcrText(r.text)]))
   }
 
   /** Per-book OCR cache for the OcrQueue. */
   ocrCache(bookId: string, engine: string): OcrCache {
     return {
-      get: async page => (await this.db.get('ocr', `${bookId}/${page}`))?.text,
+      get: async page => {
+        const rec = await this.db.get('ocr', `${bookId}/${page}`)
+        return rec?.engine === engine ? rec.text : undefined
+      },
       put: async (page, text) => void (await this.db.put('ocr', { id: `${bookId}/${page}`, page, text, engine })),
     }
   }

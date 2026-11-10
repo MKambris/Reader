@@ -170,9 +170,13 @@ export async function startOcrView(o: OcrViewOptions): Promise<{ positionChanged
       io.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
       drawn.forEach(c => (c.width = c.height = 0))
-      void engine?.terminate()
-      void pages?.destroy()
+      // Order matters: let OCR finish its page before closing the PDF it renders from.
+      const p = pages
       pages = null
+      void (async () => {
+        await engine?.terminate().catch(() => {})
+        await p?.destroy().catch(() => {})
+      })()
     },
   }
 }
